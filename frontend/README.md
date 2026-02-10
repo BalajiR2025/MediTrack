@@ -5,7 +5,7 @@ This folder contains a minimal Vite + React frontend implementing authentication
 Quick start:
 
 ```bash
-cd "H:/meditrack project/MediTrack"
+cd "H:/meditrack project/MediTrack/frontend"
 npm install
 npm run dev
 ```
