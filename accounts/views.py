@@ -10,32 +10,39 @@ from django.contrib.auth.models import User
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
-    authentication_classes = [BasicAuthentication]
-
     def post(self, request):
         username = request.data.get("username")
+        email = request.data.get("email")
         password = request.data.get("password")
+
+        if not username or not password:
+            return Response({"error": "Missing fields"}, status=400)
 
         if User.objects.filter(username=username).exists():
             return Response({"error": "User already exists"}, status=400)
 
-        User.objects.create_user(username=username, password=password)
-        return Response({"message": "User registered successfully"})
+        User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+
+        return Response({"message": "User registered successfully"}, status=201)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
-    authentication_classes = [BasicAuthentication]
-
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
 
         user = authenticate(username=username, password=password)
-        if user:
-            login(request, user)
-            return Response({"message": "Login successful"})
-        return Response({"error": "Invalid credentials"}, status=400)
+
+        if user is None:
+            return Response({"error": "Invalid credentials"}, status=401)
+
+        login(request, user)
+        return Response({"message": "Login successful"}, status=200)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

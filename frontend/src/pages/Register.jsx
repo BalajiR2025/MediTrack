@@ -18,9 +18,9 @@ export default function Register() {
       setSuccess(true)
       setTimeout(() => navigate('/login'), 1500)
     } catch (err) {
-      if (err.response?.status === 400) setError('User already exists or invalid data')
-      else setError('Registration failed. Please try again.')
-    }
+        console.log("REGISTER ERROR:", err.response?.data);
+        setError(JSON.stringify(err.response?.data));
+      }
   }
 
   return (
