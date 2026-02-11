@@ -14,12 +14,12 @@ export function AuthProvider({ children }) {
   }, [])
 
   const register = async (data) => {
-    const res = await api.post('/api/accounts/register/', data)
+    const res = await api.post('accounts/register/', data)
     return res.data
   }
 
   const login = async (credentials) => {
-    const res = await api.post('/api/accounts/login/', credentials)
+    const res = await api.post('accounts/login/', credentials)
     // expected: { token, user }
     const { token, user } = res.data
     if (token) localStorage.setItem('token', token)

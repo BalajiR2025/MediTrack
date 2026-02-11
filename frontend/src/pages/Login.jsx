@@ -14,10 +14,10 @@ export default function Login() {
     try {
       await login(form)
       navigate('/profile')
-    } catch (err) {
-      if (err.response?.status === 403 || err.response?.status === 401) setError('Invalid username or password')
-      else setError('Login failed. Please try again.')
-    }
+    }catch (err) {
+        console.log("LOGIN ERROR:", err.response?.data);
+        setError(JSON.stringify(err.response?.data));
+      }
   }
 
   return (
