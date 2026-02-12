@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import BasicAuthentication
 from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         username = request.data.get("username")
         email = request.data.get("email")
@@ -32,6 +33,8 @@ class RegisterView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class LoginView(APIView):
+    permission_classes = [AllowAny]   # 🔥 THIS LINE FIXES IT
+
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
@@ -47,8 +50,6 @@ class LoginView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(APIView):
-    authentication_classes = [BasicAuthentication]
-
     def post(self, request):
         logout(request)
         return Response({"message": "Logged out successfully"})
