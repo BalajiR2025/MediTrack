@@ -12,20 +12,26 @@ export default function PatientProfile() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    api.get("patient/profile/")
-      .then(res => setForm(res.data))
-      .catch(() => {});
-  }, []);
+  API.get("/patient/profile/", {
+  auth: {
+    username: localStorage.getItem("username"),
+    password: localStorage.getItem("password"),
+  }
+})
+.then(res => setProfile(res.data))
+.catch(err => console.log(err));
+}, []);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post("patient/profile/", form);
-      setMessage("Profile saved successfully");
-    } catch {
-      setMessage("Error saving profile");
-    }
-  };
+  e.preventDefault();
+
+  try {
+    await API.post("/patient/profile/", form);
+    alert("Profile saved successfully");
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   return (
     <div>

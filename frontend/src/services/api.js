@@ -1,12 +1,21 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+const API = axios.create({
+  baseURL: "http://127.0.0.1:8000/api",
 });
 
-export const setAuthHeader = (username, password) => {
-  const token = btoa(`${username}:${password}`);
-  api.defaults.headers.common["Authorization"] = `Basic ${token}`;
-};
+API.interceptors.request.use((config) => {
+  const username = localStorage.getItem("username");
+  const password = localStorage.getItem("password");
 
-export default api;
+  if (username && password) {
+    config.auth = {
+      username: username,
+      password: password,
+    };
+  }
+
+  return config;
+});
+
+export default API;

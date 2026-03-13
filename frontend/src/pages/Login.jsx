@@ -1,50 +1,56 @@
-import React, { useState, useContext } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { AuthContext } from '../context/AuthProvider'
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import API from "../services/api";
 
 export default function Login() {
-  const [form, setForm] = useState({ username: '', password: '' })
-  const [error, setError] = useState(null)
-  const { login } = useContext(AuthContext)
-  const navigate = useNavigate()
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [error, setError] = useState(null);
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
+
     try {
-      await login(form)
-      navigate('/profile')
-    }catch (err) {
-        console.log("LOGIN ERROR:", err.response?.data);
-        setError(JSON.stringify(err.response?.data));
-      }
-  }
+      await API.post("/accounts/login/", form);
+
+      // Save login credentials
+      localStorage.setItem("username", form.username);
+      localStorage.setItem("password", form.password);
+
+      // Go to profile page
+      navigate("/profile");
+
+    } catch (err) {
+      setError("Login failed. Please check username/password.");
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2>Welcome Back</h2>
-      {error && <div className="error-message">❌ {error}</div>}
-      <div>
-        <input 
-          placeholder="Username or Email" 
-          value={form.username} 
-          onChange={e => setForm({ ...form, username: e.target.value })} 
-          required
-        />
-      </div>
-      <div>
-        <input 
-          placeholder="Password" 
-          type="password" 
-          value={form.password} 
-          onChange={e => setForm({ ...form, password: e.target.value })} 
-          required
-        />
-      </div>
+      <h2>Login</h2>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      <input
+        placeholder="Username"
+        value={form.username}
+        onChange={(e) =>
+          setForm({ ...form, username: e.target.value })
+        }
+      />
+
+      <input
+        type="password"
+        placeholder="Password"
+        value={form.password}
+        onChange={(e) =>
+          setForm({ ...form, password: e.target.value })
+        }
+      />
+
       <button type="submit">Login</button>
-      <p style={{ textAlign: 'center', marginTop: '1.5rem', color: '#666' }}>
-        Don't have an account? <Link to="/register" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 'bold' }}>Register here</Link>
-      </p>
     </form>
-  )
+  );
 }

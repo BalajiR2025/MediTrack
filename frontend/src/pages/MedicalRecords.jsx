@@ -11,10 +11,20 @@ export default function MedicalRecords() {
   });
 
   useEffect(() => {
-    api.get("patient/records/")
-      .then(res => setRecords(res.data))
-      .catch(() => {});
-  }, []);
+  API.get("/patient/records/")
+    .then(res => setRecords(res.data))
+    .catch(err => console.log(err));
+}, []);
+
+const addRecord = async () => {
+  await API.post("/patient/records/", {
+    patient: 1,
+    diagnosis,
+    medicines,
+    doctor_name,
+    visit_date
+  });
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();

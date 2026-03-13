@@ -8,7 +8,9 @@ class PatientProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        profile = PatientProfile.objects.get(user=request.user)
+        profile = PatientProfile.objects.filter(user=request.user).first()
+        if not profile:
+            return Response({"message": "Profile not created yet"}, status=404)
         serializer = PatientProfileSerializer(profile)
         return Response(serializer.data)
 
@@ -24,10 +26,10 @@ class MedicalRecordView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        profile = PatientProfile.objects.get(user=request.user)
-        records = MedicalRecord.objects.filter(patient=profile)
+        records = MedicalRecord.objects.filter(patient__user=request.user)
         serializer = MedicalRecordSerializer(records, many=True)
         return Response(serializer.data)
+
 
     def post(self, request):
         serializer = MedicalRecordSerializer(data=request.data)
