@@ -6,7 +6,7 @@ class PatientProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PatientProfile
-        fields = ["user", "age", "gender", "blood_group", "phone"]
+        fields = ["id", "user", "age", "gender", "blood_group", "phone"]
 
 
 class MedicalRecordSerializer(serializers.ModelSerializer):

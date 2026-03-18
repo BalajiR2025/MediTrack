@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-vq)65)h9dz#(af9$-u_^=yjv@j13iswblz7i2z5)ku(x+gj=-k
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*", "192.168.137.1", "172.16.97.183", "localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -38,10 +38,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'accounts',
+    'rest_framework.authtoken',
+    'rest_framework_simplejwt.token_blacklist',
+    'accounts.apps.AccountsConfig',
     "corsheaders",
+    "django_filters",
     "patient",
     "doctor",
+    "hospitals",
+    "records",
+    "audit",
 ]
 
 MIDDLEWARE = [
@@ -131,6 +137,9 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
 }
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

@@ -3,10 +3,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from patient.models import PatientProfile, MedicalRecord
 from patient.serializers import PatientProfileSerializer, MedicalRecordSerializer
+from accounts.permissions import IsDoctor
 
 
 class DoctorPatientDetails(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDoctor]
 
     def get(self, request, patient_id):
 
