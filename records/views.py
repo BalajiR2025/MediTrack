@@ -1,5 +1,6 @@
 import os
 
+from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -61,14 +62,31 @@ class MedicalRecordViewSet(
         user = self.request.user
         role = getattr(getattr(user, "profile", None), "role", None)
 
+        # Apply filters from query params
+        qs = super().get_queryset()
+        status = self.request.query_params.get("status")
+        patient_id = self.request.query_params.get("patientId")
+        search = self.request.query_params.get("search")
+
+        if status:
+            qs = qs.filter(status=status)
+        if patient_id:
+            qs = qs.filter(patient__id=patient_id)
+        if search:
+            qs = qs.filter(
+                Q(symptoms__icontains=search)
+                | Q(diagnosis__icontains=search)
+                | Q(notes__icontains=search)
+            )
+
         if role == "patient":
             patient = Patient.objects.filter(user=user).first()
             if not patient:
                 return MedicalRecord.objects.none()
-            return MedicalRecord.objects.filter(patient=patient)
+            return qs.filter(patient=patient)
 
         # Doctor / staff / admin see all records (could be filtered by hospital in the future)
-        return super().get_queryset()
+        return qs
 
     def perform_create(self, serializer):
         user = self.request.user

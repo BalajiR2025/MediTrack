@@ -9,6 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from .models import UserRole
 from .models import EmailOTP
+from patient.models import Patient
+from hospitals.models import Hospital
 import random
 import re
 
@@ -16,44 +18,130 @@ import re
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
         role = request.data.get("role") or UserRole.PATIENT
 
         if not email or not password:
-            return Response({"error": "Missing fields"}, status=400)
+            return Response({"message": "Missing fields"}, status=400)
 
         if not re.match(r"[^@]+@[^@]+\.[^@]+", str(email)):
-            return Response({"error": "Invalid email"}, status=400)
+            return Response({"message": "Invalid email"}, status=400)
 
         if role not in (UserRole.PATIENT, UserRole.DOCTOR, UserRole.STAFF, UserRole.ADMIN):
-            return Response({"error": "Invalid role"}, status=400)
+            return Response({"message": "Invalid role"}, status=400)
 
         if User.objects.filter(username=email).exists() or User.objects.filter(email=email).exists():
-            return Response({"error": "User already exists"}, status=400)
+            return Response({"message": "User already exists"}, status=400)
+
+        # Create user and populate name fields if provided
+        name = request.data.get("name")
+        first_name = request.data.get("first_name")
+        last_name = request.data.get("last_name")
+        username = email
 
         user = User.objects.create_user(
-            username=email,
+            username=username,
             email=email,
-            password=password
+            password=password,
         )
+
+        if name:
+            parts = name.strip().split(" ", 1)
+            user.first_name = parts[0]
+            user.last_name = parts[1] if len(parts) > 1 else ""
+        else:
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+        user.save()
+
         # ensure role is set (signal creates profile)
         if hasattr(user, "profile"):
-            user.profile.role = role
-            user.profile.email_verified = False
-            user.profile.save()
+            profile = user.profile
+            profile.role = role
+            profile.email_verified = False
+
+            # Common profile fields
+            profile.phone = request.data.get("phone", profile.phone)
+            profile.address = request.data.get("address", profile.address)
+
+            # Hospital association (if provided)
+            hospital_id = request.data.get("hospitalId") or request.data.get("hospital_id")
+            if hospital_id:
+                try:
+                    profile.hospital = Hospital.objects.get(id=hospital_id)
+                except Hospital.DoesNotExist:
+                    pass
+
+            # Patient-specific fields
+            if role == UserRole.PATIENT:
+                try:
+                    profile.age = int(request.data.get("age", profile.age or 0))
+                except (TypeError, ValueError):
+                    pass
+                profile.gender = request.data.get("gender", profile.gender)
+                profile.blood_group = request.data.get("blood_group", profile.blood_group)
+
+            # Doctor-specific fields
+            if role == UserRole.DOCTOR:
+                profile.license_id = request.data.get("license_id", profile.license_id)
+                profile.specialization = request.data.get("specialization", profile.specialization)
+                try:
+                    profile.experience_years = int(request.data.get("experience_years", profile.experience_years or 0))
+                except (TypeError, ValueError):
+                    pass
+
+            # Staff-specific fields
+            if role == UserRole.STAFF:
+                profile.position = request.data.get("position", profile.position)
+
+            profile.save()
+
+            # If patient, create a Patient record to tie to this user
+            if role == UserRole.PATIENT:
+                try:
+                    age = int(request.data.get("age", 0))
+                except (TypeError, ValueError):
+                    age = 0
+                Patient.objects.create(
+                    user=user,
+                    name=f"{user.first_name or ''} {user.last_name or ''}".strip() or email,
+                    age=age or 0,
+                    gender=request.data.get("gender", ""),
+                    blood_group=request.data.get("blood_group", ""),
+                    phone=request.data.get("phone", ""),
+                    address=request.data.get("address", ""),
+                    hospital=profile.hospital,
+                )
+
         refresh = RefreshToken.for_user(user)
 
         otp = f"{random.randint(0, 999999):06d}"
         EmailOTP.objects.create(email=email, otp=otp)
 
+        user_data = {
+            "id": user.id,
+            "name": user.get_full_name() or user.username,
+            "email": user.email,
+            "role": role,
+            "phone": getattr(user.profile, "phone", "") if hasattr(user, "profile") else "",
+            "address": getattr(user.profile, "address", "") if hasattr(user, "profile") else "",
+        }
+        if hasattr(user, "profile") and getattr(user.profile, "hospital", None):
+            user_data["hospitalId"] = user.profile.hospital.id
+            user_data["hospitalName"] = user.profile.hospital.name
+
         return Response(
             {
                 "message": "User registered successfully. Verify email to continue.",
+                "token": str(refresh.access_token),
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
-                "user": {"username": user.username, "email": email},
+                "user": user_data,
                 "role": role,
                 "dev_otp": otp,
             },
@@ -81,12 +169,24 @@ class LoginView(APIView):
 
         refresh = RefreshToken.for_user(user)
         role = getattr(getattr(user, "profile", None), "role", UserRole.PATIENT)
+
+        user_data = {
+            "id": user.id,
+            "name": user.get_full_name() or user.username,
+            "email": user.email,
+            "role": role,
+        }
+        if hasattr(user, "profile") and getattr(user.profile, "hospital", None):
+            user_data["hospitalId"] = user.profile.hospital.id
+            user_data["hospitalName"] = user.profile.hospital.name
+
         return Response(
             {
                 "message": "Login successful",
+                "token": str(refresh.access_token),
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
-                "user": {"username": user.username, "email": user.email},
+                "user": user_data,
                 "role": role,
             },
             status=200,
@@ -152,9 +252,17 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({
-            "username": request.user.username,
-            "role": getattr(getattr(request.user, "profile", None), "role", UserRole.PATIENT),
-            "email_verified": getattr(getattr(request.user, "profile", None), "email_verified", False),
-            "message": "You are authenticated",
-        })
+        role = getattr(getattr(request.user, "profile", None), "role", UserRole.PATIENT)
+        user_data = {
+            "id": request.user.id,
+            "name": request.user.get_full_name() or request.user.username,
+            "email": request.user.email,
+            "role": role,
+        }
+
+        profile = getattr(request.user, "profile", None)
+        if profile and getattr(profile, "hospital", None):
+            user_data["hospitalId"] = profile.hospital.id
+            user_data["hospitalName"] = profile.hospital.name
+
+        return Response(user_data)

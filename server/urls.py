@@ -19,10 +19,16 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from . import analytics
+
 urlpatterns = [
     path('admin/', admin.site.urls),
 
+    # Auth endpoints (for frontend and external clients)
+    path('api/auth/', include('accounts.urls')),
+    # Legacy/internal auth endpoints
     path('api/accounts/', include('accounts.urls')),
+
     path('api/patient/', include('patient.urls')),
     path('api/doctor/', include('doctor.urls')),
     path('api/', include('patient.urls_v2')),
@@ -30,6 +36,10 @@ urlpatterns = [
     path('api/files/', include('records.file_urls')),
     path('api/hospitals/', include('hospitals.urls')),
     path('api/', include('audit.urls')),
+
+    # Analytics endpoints
+    path('api/analytics/dashboard', analytics.dashboard_stats),
+    path('api/analytics/records', analytics.record_stats),
 ]
 
 if settings.DEBUG:

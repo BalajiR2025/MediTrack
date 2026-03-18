@@ -15,6 +15,8 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view()),
     path('logout/', LogoutView.as_view()),
     path('profile/', ProfileView.as_view()),
+    # Frontend expects /auth/me for current user
+    path('me/', ProfileView.as_view()),
     path('request-otp/', RequestEmailOTPView.as_view()),
     path('verify-otp/', VerifyEmailOTPView.as_view()),
 ]
